@@ -14,4 +14,4 @@ Above command will run unit tests
 
 ### usage
 
-	./build/hana -d conf/asaka.conf
+	./build/hana -d conf/example.conf
