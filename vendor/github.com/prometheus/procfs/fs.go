@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
+
+	"github.com/prometheus/procfs/xfs"
 )
 
 // FS represents the pseudo-filesystem proc, which provides an interface to
@@ -16,6 +19,12 @@ const DefaultMountPoint = "/proc"
 // NewFS returns a new FS mounted under the given mountPoint. It will error
 // if the mount point can't be read.
 func NewFS(mountPoint string) (FS, error) {
+	if len(mountPoint) == 0 {
+		mountPoint = DefaultMountPoint
+	}
+	if !strings.HasPrefix(mountPoint, "/") {
+		mountPoint = DefaultMountPoint + "/" + mountPoint
+	}
 	info, err := os.Stat(mountPoint)
 	if err != nil {
 		return "", fmt.Errorf("could not read %s: %s", mountPoint, err)
@@ -30,4 +39,15 @@ func NewFS(mountPoint string) (FS, error) {
 // Path returns the path of the given subsystem relative to the procfs root.
 func (fs FS) Path(p ...string) string {
 	return path.Join(append([]string{string(fs)}, p...)...)
+}
+
+// XFSStats retrieves XFS filesystem runtime statistics.
+func (fs FS) XFSStats() (*xfs.Stats, error) {
+	f, err := os.Open(fs.Path("fs/xfs/stat"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return xfs.ParseStats(f)
 }

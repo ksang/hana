@@ -157,7 +157,7 @@ func (c *conn) Close() error {
 // JoinGroup joins a multicast group by ID.
 func (c *conn) JoinGroup(group uint32) error {
 	return c.s.SetSockopt(
-		unix.SOL_NETLINK,
+		270, //SOL_NETLINK
 		unix.NETLINK_ADD_MEMBERSHIP,
 		unsafe.Pointer(&group),
 		uint32(unsafe.Sizeof(group)),
@@ -167,7 +167,7 @@ func (c *conn) JoinGroup(group uint32) error {
 // LeaveGroup leaves a multicast group by ID.
 func (c *conn) LeaveGroup(group uint32) error {
 	return c.s.SetSockopt(
-		unix.SOL_NETLINK,
+		270, //SOL_NETLINK
 		unix.NETLINK_DROP_MEMBERSHIP,
 		unsafe.Pointer(&group),
 		uint32(unsafe.Sizeof(group)),
