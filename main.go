@@ -13,6 +13,7 @@ import (
 
 	"github.com/ksang/hana/datasource/asaka"
 	"github.com/ksang/hana/pusher"
+	"github.com/ksang/hana/syscollector"
 	"github.com/olebedev/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -83,6 +84,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sysc, err := ymalcfg.String("syscollector")
+	if err == nil {
+		syscollector := syscollector.New()
+		if err = syscollector.Register(sysc); err != nil {
+			log.Println("Error to start syscollector,", err)
+		}
+	}
+
 	addr, err := ymalcfg.String("listenaddress")
 	if err != nil {
 		addr = ":9091"
