@@ -1,0 +1,3 @@
+asaka_api_call_count_sum = sum(asaka_api_call_count) by (api)
+asaka_api_total_size_sum = sum(asaka_api_total_size) by (api)
+asaka_api_running_time_sum = sum(asaka_api_running_time) by (api)
