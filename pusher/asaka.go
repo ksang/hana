@@ -57,28 +57,28 @@ var (
 			Name: "asaka_kernel_running_time",
 			Help: "kernel total running time",
 		},
-		apiLabelList,
+		kernelLabelList,
 	)
 	kernelCallcountMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_kernel_call_count",
 			Help: "kernel total call count",
 		},
-		apiLabelList,
+		kernelLabelList,
 	)
 	kernelBlocknumMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_kernel_block_num",
 			Help: "kernel total block num",
 		},
-		apiLabelList,
+		kernelLabelList,
 	)
 	kernelThreadnumMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_kernel_thread_num",
 			Help: "kernel total thread num",
 		},
-		apiLabelList,
+		kernelLabelList,
 	)
 )
 
