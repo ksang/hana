@@ -20,11 +20,10 @@ const (
 )
 
 type asaka struct {
-	pushUrl    string
-	source     chan string
-	quitCh     chan struct{}
-	apiNameMap map[string]interface{}
-	running    bool
+	pushUrl string
+	source  chan string
+	quitCh  chan struct{}
+	running bool
 }
 
 var (
@@ -87,10 +86,6 @@ func NewAsaka(conf string) (Pusher, error) {
 	if err != nil {
 		return nil, err
 	}
-	apimap, err := cfg.Map("apinamemap")
-	if err != nil {
-		return nil, err
-	}
 	pushurl, err := cfg.String("pushurl")
 	if err != nil {
 		pushurl = ""
@@ -105,9 +100,8 @@ func NewAsaka(conf string) (Pusher, error) {
 	prometheus.MustRegister(kernelThreadnumMetric)
 
 	return &asaka{
-		pushUrl:    pushurl,
-		quitCh:     make(chan struct{}, 1),
-		apiNameMap: apimap,
+		pushUrl: pushurl,
+		quitCh:  make(chan struct{}, 1),
 	}, nil
 }
 
@@ -160,10 +154,7 @@ func (a *asaka) ParseAndPush(data string) {
 func (a *asaka) parseAndPushAPI(dataList []string) {
 	sessid := dataList[2]
 	clientid := dataList[3]
-	apiname, ok := a.apiNameMap[dataList[4]]
-	if !ok {
-		apiname = dataList[4]
-	}
+	apiname := dataList[4]
 	runtime, err := strconv.ParseUint(dataList[5], 10, 64)
 	if err != nil {
 		log.Println("data format error for parsing running time,", err)
@@ -187,7 +178,7 @@ func (a *asaka) parseAndPushAPI(dataList []string) {
 	labels := prometheus.Labels{
 		"session":   sessid,
 		"client_id": clientid,
-		"api":       apiname.(string),
+		"api":       apiname,
 	}
 
 	apiRuntimeMetric.With(labels).Set(float64(runtime))
