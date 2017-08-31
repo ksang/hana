@@ -10,6 +10,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type AsakaLogType int
+
+const (
+	_ AsakaLogType = iota
+	MONITOR_API
+	MONITOR_KERNEL
+	UNKNOWN
+)
+
 type asaka struct {
 	pushUrl    string
 	source     chan string
@@ -19,27 +28,57 @@ type asaka struct {
 }
 
 var (
-	labelList    = []string{"session", "client_id", "api"}
-	runtimeMetrc = prometheus.NewGaugeVec(
+	apiLabelList     = []string{"session", "client_id", "api"}
+	apiRuntimeMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_api_running_time",
 			Help: "api total running time",
 		},
-		labelList,
+		apiLabelList,
 	)
-	callcountMetrc = prometheus.NewGaugeVec(
+	apiCallcountMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_api_call_count",
 			Help: "api total call count",
 		},
-		labelList,
+		apiLabelList,
 	)
-	totalsizeMetrc = prometheus.NewGaugeVec(
+	apiTotalsizeMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "asaka_api_total_size",
 			Help: "api total size",
 		},
-		labelList,
+		apiLabelList,
+	)
+
+	kernelLabelList     = []string{"session", "client_id", "name"}
+	kernelRuntimeMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "asaka_kernel_running_time",
+			Help: "kernel total running time",
+		},
+		apiLabelList,
+	)
+	kernelCallcountMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "asaka_kernel_call_count",
+			Help: "kernel total call count",
+		},
+		apiLabelList,
+	)
+	kernelBlocknumMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "asaka_kernel_block_num",
+			Help: "kernel total block num",
+		},
+		apiLabelList,
+	)
+	kernelThreadnumMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "asaka_kernel_thread_num",
+			Help: "kernel total thread num",
+		},
+		apiLabelList,
 	)
 )
 
@@ -57,9 +96,9 @@ func NewAsaka(conf string) (Pusher, error) {
 		pushurl = ""
 	}
 	// Metrics have to be registered to be exposed:
-	prometheus.MustRegister(runtimeMetrc)
-	prometheus.MustRegister(callcountMetrc)
-	prometheus.MustRegister(totalsizeMetrc)
+	prometheus.MustRegister(apiRuntimeMetric)
+	prometheus.MustRegister(apiCallcountMetric)
+	prometheus.MustRegister(apiTotalsizeMetric)
 
 	return &asaka{
 		pushUrl:    pushurl,
@@ -94,33 +133,50 @@ func (a *asaka) Stop() error {
 
 func (a *asaka) ParseAndPush(data string) {
 	dataList := strings.Split(data, ",")
-	if len(dataList) < 7 {
+	if len(dataList) < 2 {
 		// ignore
 		return
 	}
-	sessid := dataList[1]
-	clientid := dataList[2]
-	apiname, ok := a.apiNameMap[dataList[3]]
+	logType, err := strconv.ParseInt(dataList[1], 10, 8)
+	if err != nil {
+		log.Println("failed to parse asaka log type,", err)
+		return
+	}
+	switch AsakaLogType(logType) {
+	case MONITOR_API:
+		a.parseAndPushAPI(dataList)
+	case MONITOR_KERNEL:
+		a.parseAndPushKernel(dataList)
+	default:
+		log.Println("unknown asaka log type,", logType)
+	}
+	return
+}
+
+func (a *asaka) parseAndPushAPI(dataList []string) {
+	sessid := dataList[2]
+	clientid := dataList[3]
+	apiname, ok := a.apiNameMap[dataList[4]]
 	if !ok {
-		apiname = dataList[3]
+		apiname = dataList[4]
 	}
-	runtime, err := strconv.ParseUint(dataList[4], 10, 64)
+	runtime, err := strconv.ParseUint(dataList[5], 10, 64)
 	if err != nil {
-		log.Println("Data format error for parsing running time,", err)
+		log.Println("data format error for parsing running time,", err)
 		return
 	}
-	callcount, err := strconv.ParseUint(dataList[5], 10, 64)
+	callcount, err := strconv.ParseUint(dataList[6], 10, 64)
 	if err != nil {
-		log.Println("Data format error for parsing calling count,", err)
+		log.Println("data format error for parsing calling count,", err)
 		return
 	}
-	size, err := strconv.ParseUint(dataList[6], 10, 64)
+	size, err := strconv.ParseUint(dataList[7], 10, 64)
 	if err != nil {
-		log.Println("Data format error for parsing size,", err)
+		log.Println("data format error for parsing size,", err)
 		return
 	}
 	if len(a.pushUrl) == 0 {
-		log.Printf("Data parsed: SESS: %s CLIENT_ID: %s API_NAME: %s RUNTIME: %d CALLCOUNT: %d SIZE: %d",
+		log.Printf("data parsed: SESS: %s CLIENT_ID: %s API_NAME: %s RUNTIME: %d CALLCOUNT: %d SIZE: %d",
 			sessid, clientid, apiname, runtime, callcount, size)
 		return
 	}
@@ -130,9 +186,48 @@ func (a *asaka) ParseAndPush(data string) {
 		"api":       apiname.(string),
 	}
 
-	runtimeMetrc.With(labels).Set(float64(runtime))
-	callcountMetrc.With(labels).Set(float64(callcount))
-	totalsizeMetrc.With(labels).Set(float64(size))
+	apiRuntimeMetric.With(labels).Set(float64(runtime))
+	apiCallcountMetric.With(labels).Set(float64(callcount))
+	apiTotalsizeMetric.With(labels).Set(float64(size))
+}
 
-	return
+func (a *asaka) parseAndPushKernel(dataList []string) {
+	sessid := dataList[2]
+	clientid := dataList[3]
+	kernelname := dataList[5]
+	runtime, err := strconv.ParseUint(dataList[6], 10, 64)
+	if err != nil {
+		log.Println("data format error for parsing running time,", err)
+		return
+	}
+	callcount, err := strconv.ParseUint(dataList[7], 10, 64)
+	if err != nil {
+		log.Println("data format error for parsing calling count,", err)
+		return
+	}
+	blocknum, err := strconv.ParseUint(dataList[8], 10, 64)
+	if err != nil {
+		log.Println("data format error for parsing blocknum,", err)
+		return
+	}
+	threadnum, err := strconv.ParseUint(dataList[9], 10, 64)
+	if err != nil {
+		log.Println("data format error for parsing threadnum,", err)
+		return
+	}
+	if len(a.pushUrl) == 0 {
+		log.Printf("data parsed: SESS: %s CLIENT_ID: %s KERNEL_NAME: %s RUNTIME: %d CALLCOUNT: %d BLOCK_NUM: %d THREAD_NUM: %d",
+			sessid, clientid, kernelname, runtime, callcount, blocknum, threadnum)
+		return
+	}
+	labels := prometheus.Labels{
+		"session":   sessid,
+		"client_id": clientid,
+		"name":      kernelname,
+	}
+
+	kernelRuntimeMetric.With(labels).Set(float64(runtime))
+	kernelCallcountMetric.With(labels).Set(float64(callcount))
+	kernelBlocknumMetric.With(labels).Set(float64(blocknum))
+	kernelThreadnumMetric.With(labels).Set(float64(threadnum))
 }
