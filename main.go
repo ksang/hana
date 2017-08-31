@@ -92,7 +92,7 @@ func main() {
 	go func() {
 		log.Fatal(http.ListenAndServe(addr, nil))
 	}()
-
+	log.Println("Hana started at", addr+"/metrics")
 	sigs := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

@@ -99,6 +99,10 @@ func NewAsaka(conf string) (Pusher, error) {
 	prometheus.MustRegister(apiRuntimeMetric)
 	prometheus.MustRegister(apiCallcountMetric)
 	prometheus.MustRegister(apiTotalsizeMetric)
+	prometheus.MustRegister(kernelRuntimeMetric)
+	prometheus.MustRegister(kernelCallcountMetric)
+	prometheus.MustRegister(kernelBlocknumMetric)
+	prometheus.MustRegister(kernelThreadnumMetric)
 
 	return &asaka{
 		pushUrl:    pushurl,
