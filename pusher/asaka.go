@@ -16,7 +16,6 @@ const (
 	_ AsakaLogType = iota
 	MONITOR_API
 	MONITOR_KERNEL
-	UNKNOWN
 )
 
 type asaka struct {

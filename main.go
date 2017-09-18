@@ -22,6 +22,7 @@ type DataSourceType int
 const (
 	_ DataSourceType = iota
 	ASAKA
+	GPUMETA
 	UNKNOWN
 )
 
@@ -30,7 +31,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configFile, "d", "hana.conf", "configuration file location")
+	flag.StringVar(&configFile, "d", "hana.conf", "configuration file location, use comma if you have multiple config files, listen address should be defined in first config file.")
 }
 
 func ParseDataSource(s string) DataSourceType {
@@ -45,6 +46,8 @@ func ParseDataSource(s string) DataSourceType {
 	switch strings.ToLower(ds) {
 	case "asaka":
 		return ASAKA
+	case "gpumeta":
+		return GPUMETA
 	default:
 		return UNKNOWN
 	}
@@ -52,32 +55,53 @@ func ParseDataSource(s string) DataSourceType {
 
 func main() {
 	flag.Parse()
-	cfg, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	conf := string(cfg)
-	ds := ParseDataSource(conf)
-	switch ds {
-	case ASAKA:
-		consumer, err1 := asaka.New(conf)
-		if err1 != nil {
+	confFileList := strings.Split(configFile, ",")
+	var conf string
+	for _, confFile := range confFileList {
+		cfg, err := ioutil.ReadFile(confFile)
+		if err != nil {
 			log.Fatal(err)
 		}
-		dataCh, err1 := consumer.Start()
-		if err1 != nil {
-			log.Fatal(err)
+		conf := string(cfg)
+		ds := ParseDataSource(conf)
+		switch ds {
+		case ASAKA:
+			consumer, err1 := asaka.New(conf)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			dataCh, err1 := consumer.Start()
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			pusher, err1 := pusher.NewAsaka(conf)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			err1 = pusher.Start(dataCh)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+		case GPUMETA:
+			consumer, err1 := asaka.New(conf)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			dataCh, err1 := consumer.Start()
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			pusher, err1 := pusher.NewGPUMeta(conf)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+			err1 = pusher.Start(dataCh)
+			if err1 != nil {
+				log.Fatal(err)
+			}
+		default:
+			log.Println("Unknown datasource type")
 		}
-		pusher, err1 := pusher.NewAsaka(conf)
-		if err1 != nil {
-			log.Fatal(err)
-		}
-		err1 = pusher.Start(dataCh)
-		if err1 != nil {
-			log.Fatal(err)
-		}
-	default:
-		return
 	}
 	ymalcfg, err := config.ParseYaml(conf)
 	if err != nil {
