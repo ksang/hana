@@ -131,7 +131,7 @@ func (g *gpu_meta) ParseAndPush(data string) {
 	gpu_id := dataList[2]
 	gpu_name := dataList[3]
 
-	value, err := strconv.ParseFloat(dataList[4], 64)
+	value, err := strconv.ParseFloat(strings.TrimSpace(dataList[4]), 64)
 	if err != nil {
 		log.Println("data format error for parsing", err)
 		return

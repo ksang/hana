@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/hpcloud/tail"
 	"github.com/ksang/hana/datasource"
@@ -55,7 +56,7 @@ func (a *asaka) Start() (chan string, error) {
 				return
 			case line := <-t.Lines:
 				if line != nil {
-					ret <- line.Text
+					ret <- strings.TrimSuffix(line.Text, "\r")
 				}
 			}
 		}
