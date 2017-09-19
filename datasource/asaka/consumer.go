@@ -5,8 +5,6 @@ package asaka
 
 import (
 	"errors"
-	"log"
-	"os"
 	"strings"
 
 	"github.com/hpcloud/tail"
@@ -36,11 +34,6 @@ func New(conf string) (datasource.Consumer, error) {
 }
 
 func (a *asaka) Start() (chan string, error) {
-	if _, err := os.Stat(a.filePath); !os.IsNotExist(err) {
-		if err = os.Remove(a.filePath); err != nil {
-			log.Println("Failed to remove old data:", err)
-		}
-	}
 	t, err := tail.TailFile(a.filePath, tail.Config{Follow: true})
 	if err != nil {
 		return nil, err
