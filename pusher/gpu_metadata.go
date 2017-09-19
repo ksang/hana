@@ -81,6 +81,8 @@ func NewGPUMeta(conf string) (Pusher, error) {
 	prometheus.MustRegister(gpuUtilMetric)
 	prometheus.MustRegister(gpuMemMetric)
 	prometheus.MustRegister(gpuTempMetric)
+	prometheus.MustRegister(pcieBWRXMetric)
+	prometheus.MustRegister(pcieBWTXMetric)
 
 	return &gpu_meta{
 		pushUrl: pushurl,
@@ -151,9 +153,9 @@ func (g *gpu_meta) ParseAndPush(data string) {
 	case GPU_UTIL:
 		gpuUtilMetric.With(labels).Set(value)
 	case GPU_MEMORY:
-		gpuUtilMetric.With(labels).Set(value)
+		gpuMemMetric.With(labels).Set(value)
 	case GPU_TEMPERATURE:
-		gpuUtilMetric.With(labels).Set(value)
+		gpuTempMetric.With(labels).Set(value)
 	case PCIE_BW_RX:
 		pcieBWRXMetric.With(labels).Set(value)
 	case PCIE_BW_TX:
